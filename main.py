@@ -2,6 +2,7 @@ import os
 import random
 import pygame
 import sys
+
 pygame.init()
 # If the code is frozen, use this path:
 if getattr(sys, "frozen", False):
@@ -71,13 +72,13 @@ def rotate_bird(bird):
 
 
 def bird_animation():
-    new_bird = bird_frames[bird_index]
+    new_bird = bird_surface
     new_bird_rect = new_bird.get_rect(center=(75, bird_rect.centery))
     return new_bird, new_bird_rect
 
 
-def score_display(game_state, key: str):
-    score_surface = game_font.render(f"Score: {int(score)} {key}", True, (255, 255, 255))
+def score_display(game_state):
+    score_surface = game_font.render(f"Score: {int(score)}", True, (255, 255, 255))
     score_rect = score_surface.get_rect(center=(216, 75))
     screen.blit(score_surface, score_rect)
 
@@ -112,29 +113,15 @@ floor_surface = pygame.transform.scale2x(
 )
 floor_x_pos = 0
 
-bird_size = (70,70)
+bird_size = (70, 70)
 
-bird_downflap = pygame.transform.scale(
-    pygame.image.load(
-        os.path.join(currentPath, "assets/chich.png")
-    ).convert_alpha(),
-    bird_size
-)
-bird_midflap = pygame.transform.scale(
-    pygame.image.load(
-        os.path.join(currentPath, "assets/chich.png")
-    ).convert_alpha(),
-    bird_size
-)
-bird_upflap = pygame.transform.scale(
-    pygame.image.load(
-        os.path.join(currentPath, "assets/chich.png")
-    ).convert_alpha(),
-    bird_size
-)
-bird_frames = [bird_downflap, bird_midflap, bird_upflap]
 bird_index = 0
-bird_surface = bird_frames[bird_index]
+bird_surface = pygame.transform.scale(
+    pygame.image.load(
+        os.path.join(currentPath, "assets/chich.png")
+    ).convert_alpha(),
+    bird_size
+)
 bird_rect = bird_surface.get_rect(center=(75, 384))
 
 pipe_surface = pygame.image.load(os.path.join(currentPath, "assets/pipe-green.png"))
@@ -145,8 +132,9 @@ game_over_surface = pygame.transform.scale2x(
     pygame.image.load(os.path.join(currentPath, "assets/gameover.png")).convert_alpha()
 )
 
-flag = pygame.transform.scale2x(
-    pygame.image.load(os.path.join(currentPath, "assets/flag.png")).convert_alpha()
+flag = pygame.transform.scale(
+    pygame.image.load(os.path.join(currentPath, "assets/win.png")).convert_alpha(),
+    (400, 130)
 )
 
 game_over_rect = game_over_surface.get_rect(center=(216, 384))
@@ -160,13 +148,6 @@ flap_sound = pygame.mixer.Sound(os.path.join(currentPath, "sounds/sfx_wing.wav")
 death_sound = pygame.mixer.Sound(os.path.join(currentPath, "sounds/sfx_die.wav"))
 score_sound = pygame.mixer.Sound(os.path.join(currentPath, "sounds/sfx_point.wav"))
 score_sound_count = 0
-
-keys = {"q": 113, "w": 119, "e": 101}
-print(list(keys.keys()))
-from random import choice
-
-random_key = choice(list(keys.keys()))
-print(random_key)
 
 while True:
     for event in pygame.event.get():
@@ -191,20 +172,13 @@ while True:
             # JUMP
             # print(event.key)
             if game_active:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == keys[random_key]: pass
-                    # print("JUMP")
-                    if event.key == keys[random_key]:
-                        flap_sound.play()
-                        bird_movement = 0
-                        bird_movement -= 7
-                        random_key = choice(list(keys.keys()))
-                        # print(random_key)
-
-
+                if event.type == pygame.KEYDOWN and event.key == 32:
+                    flap_sound.play()
+                    bird_movement = 0
+                    bird_movement -= 7
             # Restart game
             else:
-                if event.key == 32:
+                if event.type == pygame.KEYDOWN and event.key == 32:
                     game_active = True
                     pipe_list.clear()
                     bird_rect.center = (75, 384)
@@ -213,12 +187,6 @@ while True:
         # Create pipes
         if event.type == SPAWNPIPE and game_active:
             pipe_list.extend(create_pipe())
-        # Bird animation states
-        if event.type == BIRDFLAP:
-            if bird_index >= 2:
-                bird_index = 0
-            bird_index += 1
-            bird_surface, bird_rect = bird_animation()
     # BG
     screen.blit(bg_surface, (0, 0))
     # Floor
@@ -247,17 +215,16 @@ while True:
         if score_sound_count >= 100:
             score_sound.play()
             score_sound_count = 0
-        score_display(True, random_key)
+        score_display(True)
 
-    elif not game_start:
+    elif not game_start and score < WIN_SCORE:
         screen.blit(game_over_surface, game_over_rect)
-        random_key = choice(list(keys.keys()))
         # print(random_key)
         high_score = update_score(score, high_score)
-        score_display(False, random_key)
+        score_display(False)
     if score >= WIN_SCORE:
         game_active = False
         screen.blit(flag, flag_rest)
-        score_display(False, random_key)
+        score_display(False)
     pygame.display.update()
     clock.tick(120)
