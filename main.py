@@ -24,7 +24,7 @@ high_score = 10
 WIN_SCORE = 5
 
 SPAWNPIPE = pygame.USEREVENT
-pygame.time.set_timer(SPAWNPIPE, 1200)
+pygame.time.set_timer(SPAWNPIPE, 4000)
 pipe_height = [300, 450, 600]
 
 BIRDFLAP = pygame.USEREVENT + 1
