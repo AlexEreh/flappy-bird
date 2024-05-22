@@ -2,6 +2,9 @@ import os
 import random
 import pygame
 import sys
+import serial.tools.list_ports
+import serial
+import threading
 
 pygame.init()
 # If the code is frozen, use this path:
@@ -26,6 +29,13 @@ pipe_height = [300, 450, 600]
 
 BIRDFLAP = pygame.USEREVENT + 1
 pygame.time.set_timer(BIRDFLAP, 200)
+
+
+def get_arduino_port():
+    ports = list(serial.tools.list_ports.comports())
+    for port in ports:
+        if str(port.manufacturer).__contains__("Arduino"):
+            return port.device
 
 
 def draw_flor():
@@ -149,6 +159,28 @@ death_sound = pygame.mixer.Sound(os.path.join(currentPath, "sounds/sfx_die.wav")
 score_sound = pygame.mixer.Sound(os.path.join(currentPath, "sounds/sfx_point.wav"))
 score_sound_count = 0
 
+serialPort = serial.Serial(get_arduino_port(), 9600)
+
+commands = []
+
+lock = threading.Lock()
+
+
+def arduino_worker():
+    global command, lock
+    while True:
+        command = serialPort.readline().decode('utf-8').strip()
+
+        if command == "UP":
+            lock.acquire()
+            commands.append(command)
+            lock.release()
+
+
+thread = threading.Thread(target=arduino_worker)
+
+thread.start()
+
 while True:
     for event in pygame.event.get():
         # Quit
@@ -163,19 +195,25 @@ while True:
         #     #print(event.key, event)
         #     #exit()
 
+        command = ""
+
+        if len(commands) > 0:
+            command = commands.pop()
+
         if (
                 event.type == pygame.MOUSEBUTTONDOWN
                 or event.type == pygame.KEYDOWN
-
+                or command == "UP"
         ):
             game_start = False
             # JUMP
             # print(event.key)
             if game_active:
-                if event.type == pygame.KEYDOWN and event.key == 32:
+                if command == "UP":
                     flap_sound.play()
                     bird_movement = 0
-                    bird_movement -= 7
+                    bird_movement -= 5
+                    command = ""
             # Restart game
             else:
                 if event.type == pygame.KEYDOWN and event.key == 32:
@@ -184,6 +222,7 @@ while True:
                     bird_rect.center = (75, 384)
                     bird_movement = 0
                     score = 0
+
         # Create pipes
         if event.type == SPAWNPIPE and game_active:
             pipe_list.extend(create_pipe())
@@ -227,4 +266,4 @@ while True:
         screen.blit(flag, flag_rest)
         score_display(False)
     pygame.display.update()
-    clock.tick(120)
+    clock.tick(60)
